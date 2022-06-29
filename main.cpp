@@ -65,7 +65,10 @@ int XYToIndex(int x, int y)
 {
     // Converts two dimensional coordinates to one dimensional index
     // y * ROW WIDTH + x
-    return y * GRID_WIDTH + x; // ? Come back to this. Why does it work?
+
+    // Where width = 10, the first row of cells is indexed by the following sequence
+    // {11, 12 ,13 ,14 ,15 ,16 ,17 ,18 ,19 ,20}
+    return y * GRID_WIDTH + x;
 }
 
 bool IsInBounds(int x, int y)
@@ -89,7 +92,9 @@ bool IsInBounds(int x, int y)
 void Visit(int x, int y)
 {
     // Start from a given random index
-    grid[XYToIndex(x, y)] = ' '; // ! creates a "hole" in the grid
+    // Creates a 'hole' (replaces '#' with ' '),
+    // Linking the previous postion to the current one
+    grid[XYToIndex(x, y)] = ' ';
 
     // Create a local array with the four cardinal directions
     int dirs[4];
@@ -101,7 +106,22 @@ void Visit(int x, int y)
     // Shuffles the order directions order
     for (int i = 0; i < 4; i++)
     {
-        int r = rand() & 3; // ? What is the ampersand doing here
+        /* Using bitwise and ('&')
+           Given 10  = 1010
+           And   3   = 0011
+           3 & 10    = 0010
+           0000 0010 = 2
+
+           In general, n & m yields m + 1 values
+           n & 3 = {0, 1, 2, 3}
+
+           Compare to n mod m, where the solution set has exactly m members
+           Ex n % 3 = {0, 1, 2}
+           m itself is excluded
+
+           Note: (n % m) + dx still has m members
+        */
+        int r = rand() & 3;
         int temp = dirs[r];
         dirs[r] = dirs[i];
         dirs[i] = temp;
@@ -110,8 +130,10 @@ void Visit(int x, int y)
     // Loop through each direction and attempt to visit each
     for (int i = 0; i < 4; i++)
     {
+        // Rebind offset
         int dx = 0, dy = 0;
 
+        // Set offset for a given direction
         switch (dirs[i])
         {
         case NORTH:
@@ -128,18 +150,35 @@ void Visit(int x, int y)
             break;
         }
 
-        // Find the X,Y coordinates of the cell 2 spots
-        // Away from the given direction
-        int x2 = x + (dx << 1); // ? What's the shift here for?
+        /* Find the X,Y coordinates of the cell 2 spots
+           Away from the given direction
+
+           The left shift here is for concision
+           Where 1 = 0001, 1 << 1 = 0010 = 2
+
+           Bits are shifted to the left by 1
+           The bit for sign is unaffected
+           For example, -1 << 1 = -2
+           Thus this avoids branching
+
+           Generally, n << m shifts n's bits to the left m positions
+        */
+        int x2 = x + (dx << 1);
         int y2 = y + (dy << 1);
 
         if (IsInBounds(x2, y2))
         {
-            // If there's a wall in the adjacent cell
+            // If the cell 2 positions away
             if (grid[XYToIndex(x2, y2)] == '#')
             {
-                // Knock down the wall between my current position
-                // And that position
+                /* Knock down the wall between my current position
+                   And the position 2 cells away
+
+                   Before:       After:
+                   #####         #####
+                   # ###    =>   #  ##
+                   #####         #####
+                */
                 grid[XYToIndex(x2 - dx, y2 - dy)] = ' ';
 
                 // Recursively visit
